@@ -1,0 +1,42 @@
+<!-- // Bela, because this is not a static website, I am using this EJS framework. This is a dynamic web app.%> -->
+<!-- EJS allows us to create templates in html and glue them togather using the weird syntax that you see
+I have included the header file, footer file and this is the body file. It also enables us to pass variables through the pages. The files
+must use the weird syntax and end in .ejs. -->
+
+<%- include("header") -%>
+
+<div class="background">
+  <img src="/images/fedex-logo.png" class="fed_logo" alt="fed_logo">
+</div>
+
+  <div class="box" id="heading">
+    <h1><%= listTitle %></h1>
+  </div>
+
+<div class="box">
+
+  <% newListItems.forEach(function(item){ %>
+    <form action="/delete" method="post">
+      <div class="item">
+        <input type="checkbox" name="checkbox" value="<%=item._id%>" onChange="this.form.submit()">
+        <p><%= item.item %></p>
+      </div>
+      <input type="hidden" name="listName" value="<%= listTitle %>"> </input>
+    </form>
+  <% }) %>
+
+  <form class="item" action="/" method="post">
+    <input type="text" name="newItem" placeholder="Add Employee" autocomplete="off">
+    <button type="submit" name="list" value="<%= listTitle %>"><i class="bi bi-plus-lg"></i></button>
+  </form>
+
+</div>
+
+
+<div class="box">
+  <form class="item" action="/send" method="post">
+    <input type="text" name="customName" placeholder="Enter Manager" autocomplete="off">
+    <button type="submit" class="sendbutton" name="send" value="<%= listTitle %>"><i class="bi bi-arrow-right" style="font-size: 2rem"></i></button>
+  </form>
+</div>
+<%- include("footer") -%>
