@@ -3,7 +3,7 @@
 I have included the header file, footer file and this is the body file. It also enables us to pass variables through the pages. The files
 must use the weird syntax and end in .ejs. -->
 
-<%- include("header") -%>
+<%- include("partials/header") -%>
 
 <div class="background">
   <img src="/images/fedex-logo.png" class="fed_logo" alt="fed_logo">
@@ -39,4 +39,5 @@ must use the weird syntax and end in .ejs. -->
     <button type="submit" class="sendbutton" name="send" value="<%= listTitle %>"><i class="bi bi-arrow-right" style="font-size: 2rem"></i></button>
   </form>
 </div>
-<%- include("footer") -%>
+
+<%- include("partials/footer") -%>

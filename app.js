@@ -30,6 +30,16 @@ const listSchema = new mongoose.Schema({
   items: [itemsSchema]
 });
 
+const userSchema = new mongoose.Schema({
+  email: String,
+  password: String
+});
+
+
+// Adding database encryption to only the password field//
+const secret = process.env.DB_ENCRYPTION;
+userSchema.plugin(encrypt, {secret: secret, encryptedFields:["password"]});
+
 
 
 // This initializes a new schema or what Mongo calls a collection. Each collection
@@ -37,6 +47,7 @@ const listSchema = new mongoose.Schema({
 
 const Item = mongoose.model("Item", itemsSchema);
 const List = mongoose.model("List", listSchema);
+const User = mongoose.model("User", userSchema);
 
 
 
@@ -68,19 +79,70 @@ app.set("view engine", "ejs");
 app.use(express.static("public"));
 
 
-// Intialize body parser. This allows you to target different objects on your html,
-// like what the user types in a text box or hits a submit button
+// Intialize body parser.
+// This allows you to access the text inside text forms on our pages
 app.use(bodyParser.urlencoded({
   extended: true
 }));
 
 
-// MAIN PAGE //
+              ///////////// MAIN PAGE ////////////
+app.get("/", function(req, res){
+  res.render("home");
+});
+
+
+              ///////////// register ////////////
+app.get("/register", function(req, res){
+  res.render("register");
+});
+
+app.post("/register", function(req, res){
+  const newUser = new User({
+    email: req.body.username,
+    password: req.body.password
+  });
+  newUser.save(function(err){
+    if (err){
+      console.log(err)
+    } else {
+      res.render("main")
+    };
+  });
+});
+
+
+              ///////////// login //////////////
+app.get("/login", function(req, res){
+  res.render("login");
+})
+
+app.post("/login", function(req, res){
+  const username = req.body.username;
+  const password = req.body.password;
+
+  User.findOne({email: username}, function(err, foundUser){
+    if (err){
+      console.log(err);
+    } else {
+      if (foundUser) {
+        if (foundUser.password === password){
+          res.render("main");
+        }
+      }
+    }
+  });
+});
+
+
+
+              ///////////// staffing ///////////
 
 
 // A GET call to retrieve all current items in the database, if there are less
 // than zero then it adds back the default items listed below
-app.get("/", function(req, res) {
+
+app.get("/staffing", function(req, res) {
 
   Item.find({}, function(err, foundItems) { //Item.find with an empty{} means get everything in the collection in Mongo speak
 
@@ -92,7 +154,7 @@ app.get("/", function(req, res) {
           console.log("Items successfully added.");
         }
       });
-      res.redirect("/");
+      res.redirect("/staffing");
     } else {
       res.render("list", {
         listTitle: day,
@@ -115,14 +177,14 @@ app.post("/", function(req, res) {
 
   if (listName === day) {
     item.save();
-    res.redirect("/");
+    res.redirect("/staffing");
   } else {
     List.findOne({
       name: listName
     }, function(err, foundList) { // mongo command to look for item by name in the database
       foundList.items.push(item);
       foundList.save();
-      res.redirect("/" + listName);
+      res.redirect("/staffing" + listName);
     });
   };
 
@@ -140,7 +202,7 @@ app.post("/delete", function(req, res) {
     Item.findByIdAndRemove(checkedItemId, function(err) { //this is an example of a mongo database command
       if (!err) {
         console.log("Successfully deleted checked item")
-        res.redirect("/");
+        res.redirect("/staffing");
       };
     });
   } else {
@@ -154,7 +216,7 @@ app.post("/delete", function(req, res) {
       }
     }, function(err, foundList) {
       if (!err) {
-        res.redirect("/" + listName);
+        res.redirect("/staffing" + listName);
       };
     });
   };
@@ -204,7 +266,7 @@ app.post("/send", function(req, res) {
     });
   });
 });
-
+///END STAFFING///
 
 console.log(day)
 
@@ -214,4 +276,4 @@ console.log(day)
 app.listen(process.env.PORT || 3000, function() {
   console.log("Server is Flying");
 });
-///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////END PROGRAM///////////////////////////////////////
