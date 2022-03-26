@@ -16,6 +16,7 @@
     "express": "^4.17.3",
     "fs": "^0.0.1-security",
     "lodash": "^4.17.21",
+    "md5": "^2.3.0",
     "mongodb": "^4.4.1",
     "mongoose": "^6.2.6",
     "mongoose-encryption": "^2.1.2",
