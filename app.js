@@ -108,7 +108,14 @@ const item1 = new Item({
 
 const defaultItems = [item1];
 
-          //////////// splash home page (the very beginning) //////////////
+
+
+
+
+
+
+
+      //////////// splash home page (the very beginning) //////////////
 app.get("/", function(req, res){
   res.render("home");
 });
