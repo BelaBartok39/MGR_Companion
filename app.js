@@ -8,8 +8,6 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const date = require(__dirname + "/date.js");
 const nodemailer = require("nodemailer");
-const bcrypt = require("bcrypt");
-const saltRounds = 15;
 const passport = require("passport");
 const session = require("express-session");
 const passportLocalMongoose = require("passport-local-mongoose");
@@ -17,9 +15,7 @@ const passportLocalMongoose = require("passport-local-mongoose");
 
 
 
-
-
-                        ////// BEGIN APP //////
+                         ////// BEGIN APP //////
 
 // Intitalize date
 const day = date.getDate();
@@ -111,50 +107,15 @@ const item1 = new Item({
 
 const defaultItems = [item1];
 
-
+          //////////// splash home page (the very beginning) //////////////
 app.get("/", function(req, res){
   res.render("home");
 });
 
+
+                      //////////// login //////////////
 app.get("/login", function(req, res){
   res.render("login");
-});
-
-app.get("/register", function(req, res){
-  res.render("register");
-});
-
-app.get("/main", function(req, res){
-  User.find({"main": {$ne: null}}, function(err, foundUsers){
-    if (err){
-      console.log(err);
-    } else {
-      if (foundUsers) {
-        res.render("main", {usersWithSecrets: foundUsers});
-      }
-    }
-  });
-});
-
-
-app.get("/logout", function(req, res){
-  req.logout();
-  res.redirect("/");
-});
-
-app.post("/register", function(req, res){
-
-  User.register({username: req.body.username}, req.body.password, function(err, user){
-    if (err) {
-      console.log(err);
-      res.redirect("/register");
-    } else {
-      passport.authenticate("local")(req, res, function(){
-        res.redirect("/main");
-      });
-    }
-  });
-
 });
 
 app.post("/login", function(req, res){
@@ -177,13 +138,50 @@ app.post("/login", function(req, res){
 });
 
 
+                      //////////// register //////////////
+app.get("/register", function(req, res){
+  res.render("register");
+});
+
+app.post("/register", function(req, res){
+
+  User.register({username: req.body.username}, req.body.password, function(err, user){
+    if (err) {
+      console.log(err);
+      res.redirect("/register");
+    } else {
+      passport.authenticate("local")(req, res, function(){
+        res.redirect("/main");
+      });
+    }
+  });
+
+});
+
+
+                      //////////// main //////////////
+app.get("/main", function(req, res){
+  User.find({"main": {$ne: null}}, function(err, foundUsers){
+    if (err){
+      console.log(err);
+    } else {
+      if (foundUsers) {
+        res.render("main", {usersWithSecrets: foundUsers});
+      }
+    }
+  });
+});
+
+                      //////////// logout //////////////
+app.get("/logout", function(req, res){
+  req.logout();
+  res.redirect("/");
+});
 
 
                       ///////////// staffing ///////////
-
-
-// A GET call to retrieve all current items in the database, if there are less
-// than zero then it adds back the default items listed below
+// retrieve all current items in the database, if there are less
+// than zero then it adds back the default items listed above
 
 app.get("/staffing", function(req, res) {
   if (req.isAuthenticated()) {
@@ -211,7 +209,7 @@ app.get("/staffing", function(req, res) {
 });
 
 // A POST call to add items to the list and the database
-app.post("/", function(req, res) {
+app.post("/staffing", function(req, res) {
 
 
   const itemName = req.body.newItem; // these are ejs commands telling the app to look
@@ -237,8 +235,7 @@ app.post("/", function(req, res) {
 });
 
 
-// This delete route for when you check a checkbox, it then deletes the thing. Not sure
-// if I have hooked this up to the database yet. It renders it deleted on the screen for now.
+// This delete route for when you check a checkbox, it then deletes from DB and page.
 
 app.post("/delete", function(req, res) {
   const checkedItemId = req.body.checkbox;
@@ -269,6 +266,7 @@ app.post("/delete", function(req, res) {
 
 });
 
+// initialize mail transport and login
 app.post("/send", function(req, res) {
   const title = req.body.customName
   var transporter = nodemailer.createTransport({
@@ -282,6 +280,7 @@ app.post("/send", function(req, res) {
   });
 
 
+// Send email with nodemailer
   Item.find({}, function(err, foundItems) {
 
     const data = ejs.renderFile(__dirname + "/views/emailtemp.ejs", {
