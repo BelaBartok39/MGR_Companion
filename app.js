@@ -10,17 +10,52 @@ const date = require(__dirname + "/date.js");
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcrypt");
 const saltRounds = 15;
+const passport = require("passport");
+const session = require("express-session");
+const passportLocalMongoose = require("passport-local-mongoose");
 
 
 
-// MONGO CONNECTION //
-// This is the connection to the database. 27017 is the port mongo chooses by default
+
+
+
+                        ////// BEGIN APP //////
+
+// Intitalize date
+const day = date.getDate();
+
+// Initialize express
+const app = express();
+
+
+// Intialize ejs and Session.
+// Body parser allows you to access the text inside text forms on our pages
+app.set("view engine", "ejs");
+app.use(express.static("public"));
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
+
+app.use(session({
+  secret: process.env.SESSION_KEY,
+  resave: false,
+  saveUninitialized: false
+}));
+
+
+// Initalize passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+
+                        // MONGO CONNECTION //
+// This is the connection to the database. 27017 is the local port mongo chooses.
+// unless you are connecting to the cloud cluster, which is the case right here.
 
 mongoose.connect(process.env.DB_CONNECT)
 console.log("DB CONNECTION SUCCESSFUL")
 
-
-// EE TABLE //
+                //////////// MONGO DB SCHEMAS //////////////
 // This is the employee default schema. Just a name.
 const itemsSchema = new mongoose.Schema({
   item: String,
@@ -37,13 +72,29 @@ const userSchema = new mongoose.Schema({
 });
 
 
+// Add passport plugin to user Schema
+userSchema.plugin(passportLocalMongoose);
 
 // This initializes a new schema or what Mongo calls a collection. Each collection
 // is essentially the equivalent of a table in SQL
 
 const Item = mongoose.model("Item", itemsSchema);
 const List = mongoose.model("List", listSchema);
-const User = mongoose.model("User", userSchema);
+const User = new mongoose.model("User", userSchema);
+
+
+// Create passport sessions
+passport.use(User.createStrategy());
+
+passport.serializeUser(function(user, done) {
+  done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+  User.findById(id, function(err, user) {
+    done(err, user);
+  });
+});
 
 
 
@@ -61,89 +112,81 @@ const item1 = new Item({
 const defaultItems = [item1];
 
 
-////// BEGIN APP //////
-
-// Intitalize date
-const day = date.getDate();
-
-// Initialize express
-const app = express();
-
-
-// Initialize ejs
-app.set("view engine", "ejs");
-app.use(express.static("public"));
-
-
-// Intialize body parser.
-// This allows you to access the text inside text forms on our pages
-app.use(bodyParser.urlencoded({
-  extended: true
-}));
-
-
-              ///////////// MAIN PAGE ////////////
 app.get("/", function(req, res){
   res.render("home");
 });
 
+app.get("/login", function(req, res){
+  res.render("login");
+});
 
-              ///////////// register ////////////
 app.get("/register", function(req, res){
   res.render("register");
 });
 
-app.post("/register", function(req, res){
-  bcrypt.hash(req.body.password, saltRounds, function(err, hash){
-    const newUser = new User({
-      email: req.body.username,
-      password: hash
-    });
-    newUser.save(function(err){
-      if (err){
-        console.log(err)
-      } else {
-        res.render("main")
-      }
-    });
-  });
-});
-
-
-              ///////////// login //////////////
-app.get("/login", function(req, res){
-  res.render("login");
-})
-
-app.post("/login", function(req, res){
-  const username = req.body.username;
-  const password = req.body.password;
-
-  User.findOne({email: username}, function(err, foundUser){
+app.get("/main", function(req, res){
+  User.find({"main": {$ne: null}}, function(err, foundUsers){
     if (err){
       console.log(err);
     } else {
-      if (foundUser) {
-        bcrypt.compare(password, foundUser.password, function(err, result){
-          if (result === true){
-            res.render("main");
-          }
-        });
+      if (foundUsers) {
+        res.render("main", {usersWithSecrets: foundUsers});
       }
     }
   });
 });
 
 
+app.get("/logout", function(req, res){
+  req.logout();
+  res.redirect("/");
+});
 
-              ///////////// staffing ///////////
+app.post("/register", function(req, res){
+
+  User.register({username: req.body.username}, req.body.password, function(err, user){
+    if (err) {
+      console.log(err);
+      res.redirect("/register");
+    } else {
+      passport.authenticate("local")(req, res, function(){
+        res.redirect("/main");
+      });
+    }
+  });
+
+});
+
+app.post("/login", function(req, res){
+
+  const user = new User({
+    username: req.body.username,
+    password: req.body.password
+  });
+
+  req.login(user, function(err){
+    if (err) {
+      console.log(err);
+    } else {
+      passport.authenticate("local")(req, res, function(){
+        res.redirect("/main");
+      });
+    }
+  });
+
+});
+
+
+
+
+                      ///////////// staffing ///////////
 
 
 // A GET call to retrieve all current items in the database, if there are less
 // than zero then it adds back the default items listed below
 
 app.get("/staffing", function(req, res) {
-
+  if (req.isAuthenticated()) {
   Item.find({}, function(err, foundItems) { //Item.find with an empty{} means get everything in the collection in Mongo speak
 
     if (foundItems.length === 0) {
@@ -162,6 +205,9 @@ app.get("/staffing", function(req, res) {
       });
     };
   });
+} else {
+  res.redirect("/login");
+}
 });
 
 // A POST call to add items to the list and the database
@@ -266,7 +312,7 @@ app.post("/send", function(req, res) {
     });
   });
 });
-///END STAFFING///
+                              ///END STAFFING///
 
 console.log(day)
 
