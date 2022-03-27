@@ -209,7 +209,7 @@ app.get("/staffing", function(req, res) {
 });
 
 // A POST call to add items to the list and the database
-app.post("/", function(req, res) {
+app.post("/staffing", function(req, res) {
 
 
   const itemName = req.body.newItem; // these are ejs commands telling the app to look
